@@ -1,27 +1,16 @@
 # Example: figure-interior localization and reference navigation
 
-This example demonstrates the intended output using Figure 1 from Yazdanpanah et al. (2026). The source figure presents the experimental paradigm and behavioral results for somatic pain, vicarious pain, and cognitive effort. The localized version replaces semantic English labels inside the figure while preserving data points, axes, colors, uncertainty bars, significance marks, panel labels, and geometry.
+This example uses Figure 1 from Yazdanpanah et al. (2026). The Chinese version replaces semantic English text **inside the figure at its original positions** while preserving the data, axes, colors, error bars, significance marks, panel labels, and layout.
 
-## Representative label mapping
+## Original English figure
 
-| Source label | Chinese replacement |
-|---|---|
-| somatic pain | 疼痛 |
-| vicarious pain | 替代性疼痛 |
-| cognitive effort | 认知努力 |
-| expect | 预期 |
-| actual | 实际 |
-| Prior to trial start | 试次开始前 |
-| Cue (1 s) | 线索（1秒） |
-| Expectation rating (4 s) | 预期评分（4秒） |
-| Stimulus (9 s) | 刺激（9秒） |
-| Perceptual rating (4 s) | 知觉评分（4秒） |
-| cue level | 线索水平 |
-| stimulus intensity | 刺激强度 |
-| effects | 效应 |
-| interaction | 交互作用 |
+![Original English Figure 1](./assets/figure-1-original.webp)
 
-The example is considered successful only when the Chinese terms replace the English labels at the original positions inside the image. Adding a translated caption or a label table below an unchanged English figure does not satisfy the skill's figure-localization requirement.
+## Chinese-localized figure
+
+![Chinese-localized Figure 1 with English labels replaced in place](./assets/figure-1-chinese.webp)
+
+This is the required result: the image itself is re-rendered, and the Chinese labels cover and replace the original English labels. Merely adding a translated caption or a label-mapping table below an unchanged English figure does not satisfy the skill.
 
 ## Finding cited literature in Word or WPS
 
@@ -37,4 +26,4 @@ The generated DOCX uses native internal hyperlinks and DOI links.
 
 [1] Yazdanpanah, A., Jung, H., Soltani, A., & Wager, T. D. (2026). Social information creates self-fulfilling prophecies in judgments of pain, vicarious pain, and cognitive effort. *Proceedings of the National Academy of Sciences of the United States of America, 123*(7), e2513856123. https://doi.org/10.1073/pnas.2513856123
 
-The source article is open access under CC BY 4.0. This repository example describes the localization method and attribution; users remain responsible for complying with the source license when redistributing figures.
+The source article is open access under CC BY 4.0. The reproduced figure is presented as a translation/localization example with attribution.
