@@ -92,7 +92,7 @@ python scripts/validate_navigation.py output.docx
 
 The first script creates ASCII bookmark targets and native OOXML `w:hyperlink w:anchor="ref_N"` links. In Microsoft Word or WPS Writer, the normal activation is **Ctrl + left-click**:
 
-1. Hold **Ctrl** and left-click a正文 citation number such as `[12]` to jump to reference 12.
+1. Hold **Ctrl** and left-click a citation number such as `[12]` to jump to reference 12.
 2. Hold **Ctrl** and left-click the DOI in the reference entry to open its official `https://doi.org/...` landing page.
 3. If the application is configured for single-click hyperlinks, Ctrl may not be required.
 4. If navigation fails, press **Ctrl + F** and search the DOI, exact title, author surname, or reference number; then run `scripts/validate_navigation.py` to distinguish a document-link defect from an application setting.
