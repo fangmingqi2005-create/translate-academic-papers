@@ -31,22 +31,13 @@ Ask a single concise blocking question only when no paper can be accessed, the s
 - Read [references/translation-standard.md](references/translation-standard.md) before translating.
 - Read [references/figure-translation.md](references/figure-translation.md) before processing figures.
 - Read [references/output-variants.md](references/output-variants.md) before building either DOCX.
-- Read [references/performance-budget.md](references/performance-budget.md) before starting the timed pipeline.
 - Read [references/qa-checklist.md](references/qa-checklist.md) before delivery.
 
-## Quality-first performance policy
+## Quality and efficiency policy
 
-Prioritize a verified, complete translation over a fixed delivery deadline. Treat 3 minutes for ordinary papers and 5 minutes for long papers as optimization targets, not shipping deadlines. Never omit content, weaken paragraph alignment, skip figure-interior translation, bypass navigation, or avoid render QA merely to meet a time target.
+Prioritize a verified, complete translation. Work efficiently using one source parse, one shared source map, stable-ID translation batches, reusable hash-validated caches, one process for both DOCX variants, and targeted retries for failed units. These are efficiency practices, not delivery deadlines.
 
-Write the absolute deadline into the task state and pass the remaining seconds—not a fresh 180/300 seconds—to every subprocess and external call. Reserve the final 20 seconds for file existence checks and the user-facing response. Never report extraction time, translation time, rebuild time, or a warm-cache rerun as the end-to-end duration.
-
-The quality-first policy supersedes any earlier absolute-deadline wording in this section: record timing for reporting, but do not terminate quality-critical work when an optimization target elapses.
-
-Use one source parse and one shared source map. Batch-translate stable-ID blocks, process independent figures concurrently within available tool limits, reuse only hash-validated translation and figure caches, build both DOCX variants in one process, and perform one final structural/navigation QA pass. Never issue one network request per paragraph.
-
-Use validation-driven iteration. Retry only the failed translation batch, figure, link set, or rendered page instead of restarting the complete pipeline. Continue until every hard quality gate passes or a genuine external blocker remains.
-
-If an external service stalls, preserve valid cache entries and retry the affected unit with a bounded timeout. Report a specific blocker rather than shipping a falsely complete file. Always report the true request-to-delivery elapsed time and whether the run was cold-cache or warm-cache. Follow [references/performance-budget.md](references/performance-budget.md) for speed optimizations and cache validity.
+Never omit content, weaken paragraph alignment, skip figure-interior translation, bypass navigation, or avoid render QA in order to finish sooner. Continue until every hard quality gate passes or a genuine external blocker remains. If an external service stalls, preserve valid work and report the specific blocker rather than shipping a falsely complete file.
 
 ## Workflow
 
@@ -78,7 +69,7 @@ Do not deliver an English figure with only a Chinese caption. Rebuild or edit th
 
 **Hard gate for figures:** A figure passes only when the translated PNG/SVG/PDF image itself contains the Chinese replacement at the original label location. A caption, a legend/key below the image, a blue annotation panel, or a bilingual translation table does not count. Before inserting the image into DOCX, extract the final embedded image and visually inspect it. Any residual English title, axis title, categorical tick, legend entry, callout, node label, process step, or annotation is a blocking failure, except mathematical notation, units, identifiers, and explicitly preserved standard abbreviations.
 
-For raster figures that cannot be edited safely as selectable vector text, use the built-in Image 2 editing workflow: inspect the original crop, pass that crop as the edit target, provide an exact English-to-Chinese label map, and explicitly require preservation of every data value, data mark, color, scale, panel boundary, uncertainty mark, significance mark, geometry, and aspect ratio. Explicitly forbid translation panels, added captions, invented labels, cropping, and data redrawing. View the generated image and accept it only after confirming that the original English labels are removed and Chinese replacements appear at the same locations. If the image fails, revise the prompt and regenerate before continuing.
+For every raster figure that contains semantic English requiring replacement, **must call Image 2** to edit the supplied figure image. Inspect the original crop, pass that crop as the Image 2 edit target, provide an exact English-to-Chinese label map, and explicitly require preservation of every data value, data mark, color, scale, panel boundary, uncertainty mark, significance mark, geometry, and aspect ratio. Explicitly forbid translation panels, added captions, invented labels, cropping, and data redrawing. View the Image 2 result and accept it only after confirming that the original English labels are removed and Chinese replacements appear at the same locations. If the image fails, revise the Image 2 prompt and regenerate before continuing. Do not substitute a caption, label table, ordinary redraw, OCR overlay, or untranslated original image for this required Image 2 edit.
 
 Recreate editable tables in Chinese. Preserve equations as editable equations whenever possible.
 
@@ -86,7 +77,7 @@ Recreate editable tables in Chinese. Preserve equations as editable equations wh
 
 Build the Chinese-only and paragraph-aligned bilingual DOCX files from the same source map and terminology ledger. The two files must contain identical scientific content, figures, tables, equations, citations, and end matter; the bilingual version additionally retains every English paragraph directly before its Chinese partner.
 
-In the bilingual edition, every figure location must contain both versions in this order: the untouched English source figure with its English caption, followed immediately by the image-edited Chinese figure with its Chinese caption. The Chinese figure must cover and replace English semantic labels at their original locations; a caption, key, or translation panel alone is not acceptable. Use the validated `image2` image-editing workflow for raster figures when direct deterministic editing is insufficient.
+In the bilingual edition, every figure location must contain both versions in this order: the untouched English source figure with its English caption, followed immediately by the Image 2-edited Chinese figure with its Chinese caption. The Chinese figure must cover and replace English semantic labels at their original locations; a caption, key, or translation panel alone is not acceptable. For every applicable raster figure, use the validated Image 2 image-editing workflow; do not replace it with direct deterministic editing.
 
 For the bilingual file, emit each source-map record as one atomic pair: `[source_id, English block]` followed immediately by `[source_id, Chinese block]`. Do not merge adjacent English records, split Chinese records, or use page-level extracted text as a substitute for paragraph records. Captions, notes, Methods paragraphs, and short transitions each require their own pair.
 
@@ -117,5 +108,5 @@ For the bilingual edition, extract the pair records and require a one-to-one cou
 
 ## Required final report
 
-Deliver both verified DOCX files. State whether the translation is complete or draft. Report elapsed seconds, the 180/300-second class, and cold-cache or warm-cache status. Report unreadable source passages, uncertain figure reconstruction, omitted supplementary files, or unresolved citations. Do not deliver intermediates unless requested.
+Deliver both verified DOCX files. State whether the translation is complete or draft. Report unreadable source passages, uncertain figure reconstruction, omitted supplementary files, or unresolved citations. Do not deliver intermediates unless requested.
 
