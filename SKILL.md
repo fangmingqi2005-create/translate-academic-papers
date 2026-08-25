@@ -16,6 +16,14 @@ Generate two DOCX files unless the user explicitly requests only one:
 
 Use the exact paragraph pairing and styling contract in [references/output-variants.md](references/output-variants.md). Do not interpret “bilingual” as two columns unless the user explicitly requests columns.
 
+## Immediate-start policy
+
+When the user supplies a paper file (or a readable local path/attachment) and asks for translation, start the complete workflow immediately and deliver the two default DOCX files in the same response. Do **not** ask setup, formatting, terminology, output-name, output-folder, figure-style, reference-link, or confirmation questions: this skill already defines their defaults.
+
+Infer the Chinese title from the paper title; use the source file's directory as the output directory unless the user specifies another location. Use the translation standard, terminology ledger, figure workflow, DOCX styling, bilingual layout, citation navigation, and QA rules in this skill without asking the user to select them.
+
+Ask a single concise blocking question only when no paper can be accessed, the supplied file is unreadable/corrupt/password-protected, essential pages are missing, or a requested destination cannot be written. If any non-blocking ambiguity remains, make the best evidence-based choice, record it in the final report, and continue. Never pause merely to preview a plan or obtain permission to begin the translation.
+
 ## Load supporting instructions
 
 - Load the available `pdf` skill for extraction, OCR, rendering, or PDF inspection.
@@ -25,11 +33,14 @@ Use the exact paragraph pairing and styling contract in [references/output-varia
 - Read [references/output-variants.md](references/output-variants.md) before building either DOCX.
 - Read [references/performance-budget.md](references/performance-budget.md) before starting the timed pipeline.
 - Read [references/qa-checklist.md](references/qa-checklist.md) before delivery.
-- Read [examples/figure-localization.md](examples/figure-localization.md) when a concrete figure-localization or WPS navigation example is useful.
 
 ## Quality-first performance policy
 
 Prioritize a verified, complete translation over a fixed delivery deadline. Treat 3 minutes for ordinary papers and 5 minutes for long papers as optimization targets, not shipping deadlines. Never omit content, weaken paragraph alignment, skip figure-interior translation, bypass navigation, or avoid render QA merely to meet a time target.
+
+Write the absolute deadline into the task state and pass the remaining seconds—not a fresh 180/300 seconds—to every subprocess and external call. Reserve the final 20 seconds for file existence checks and the user-facing response. Never report extraction time, translation time, rebuild time, or a warm-cache rerun as the end-to-end duration.
+
+The quality-first policy supersedes any earlier absolute-deadline wording in this section: record timing for reporting, but do not terminate quality-critical work when an optimization target elapses.
 
 Use one source parse and one shared source map. Batch-translate stable-ID blocks, process independent figures concurrently within available tool limits, reuse only hash-validated translation and figure caches, build both DOCX variants in one process, and perform one final structural/navigation QA pass. Never issue one network request per paragraph.
 
@@ -42,6 +53,8 @@ If an external service stalls, preserve valid cache entries and retry the affect
 ### 1. Map the complete source
 
 Determine whether the PDF has a usable text layer. OCR only image-only or damaged pages. Inspect every page and restore natural reading order in multi-column layouts.
+
+Begin this step as soon as the source is available. Do not stop to ask for a title, translation preferences, an output filename, a glossary, image handling instructions, or whether to create both standard deliverables.
 
 Build a page-aware source map before translating. Cover all headings, body paragraphs, figures, captions, tables, equations, footnotes, Methods, limitations, availability statements, declarations, acknowledgements, appendices, supplementary text supplied by the user, and references. Give each substantive paragraph a stable source ID so the bilingual edition can be checked one-to-one.
 
@@ -73,9 +86,9 @@ Recreate editable tables in Chinese. Preserve equations as editable equations wh
 
 Build the Chinese-only and paragraph-aligned bilingual DOCX files from the same source map and terminology ledger. The two files must contain identical scientific content, figures, tables, equations, citations, and end matter; the bilingual version additionally retains every English paragraph directly before its Chinese partner.
 
-In the bilingual edition, every figure location must contain both versions in this order: the untouched English source figure with its English caption, followed immediately by the image-edited Chinese figure with its Chinese caption.
+In the bilingual edition, every figure location must contain both versions in this order: the untouched English source figure with its English caption, followed immediately by the image-edited Chinese figure with its Chinese caption. The Chinese figure must cover and replace English semantic labels at their original locations; a caption, key, or translation panel alone is not acceptable. Use the validated `image2` image-editing workflow for raster figures when direct deterministic editing is insufficient.
 
-For the bilingual edition, emit each source-map record as one atomic pair: `[source_id, English block]` followed immediately by `[source_id, Chinese block]`. Do not merge adjacent English records, split Chinese records, or use page-level extracted text as a substitute for paragraph records.
+For the bilingual file, emit each source-map record as one atomic pair: `[source_id, English block]` followed immediately by `[source_id, Chinese block]`. Do not merge adjacent English records, split Chinese records, or use page-level extracted text as a substitute for paragraph records. Captions, notes, Methods paragraphs, and short transitions each require their own pair.
 
 Keep the English reference list in both files. Do not translate bibliographic entries, author names, journal titles, or paper titles in the reference list.
 
@@ -90,23 +103,19 @@ python scripts/link_citations.py input.docx output.docx
 python scripts/validate_navigation.py output.docx
 ```
 
-The first script creates ASCII bookmark targets and native OOXML `w:hyperlink w:anchor="ref_N"` links. In Microsoft Word or WPS Writer, the normal activation is **Ctrl + left-click**:
+The first script creates ASCII bookmark targets and native OOXML `w:hyperlink w:anchor="ref_N"` links, which WPS Writer recognizes as real internal hyperlinks. In WPS, activate them with Ctrl+click unless the user's WPS setting is configured for single-click. A blue underlined field result without a `w:hyperlink` anchor is not sufficient. The script also converts DOI strings to `https://doi.org/...` links. The validator fails on missing anchors or bookmark targets.
 
-1. Hold **Ctrl** and left-click a citation number such as `[12]` to jump to reference 12.
-2. Hold **Ctrl** and left-click the DOI in the reference entry to open its official `https://doi.org/...` landing page.
-3. If the application is configured for single-click hyperlinks, Ctrl may not be required.
-4. If navigation fails, press **Ctrl + F** and search the DOI, exact title, author surname, or reference number; then run `scripts/validate_navigation.py` to distinguish a document-link defect from an application setting.
-
-A blue underlined field result without a native `w:hyperlink` anchor is not sufficient. Use lawful DOI resolution and full-text routes only: publisher pages, PubMed Central, institutional subscriptions, preprint servers, or author manuscripts.
+Use lawful DOI resolution and full-text routes only. Prefer publisher pages, PubMed Central, Unpaywall, institutional subscriptions, preprint servers, or author manuscripts.
 
 ### 7. Verify content, navigation, and rendering
 
 Render both final DOCX files and inspect every page. Verify one-to-one paragraph pairing in the bilingual file, translated figure interiors in both files, references and citations in both files, and WPS-compatible hyperlink field instructions. Fix defects and rerender after any layout-sensitive or OOXML change.
 
-For every figure, extract the image from the final DOCX (`word/media/*`), compare it with the source, and record a label-by-label pass/fail result. Do not infer success from the surrounding caption or from a translation panel outside the plot area.
+For every figure, extract the image from the final DOCX (`word/media/*`), compare it with the source, and record a label-by-label pass/fail result. Do not infer success from the surrounding caption or from a translation panel outside the plot area. If direct masking and redraw cannot preserve the data marks, stop and report the figure as blocked instead of shipping an English figure.
 
 For the bilingual edition, extract the pair records and require a one-to-one count and adjacency audit before delivery. Any mismatch between English and Chinese block counts is a blocking defect.
 
 ## Required final report
 
-Deliver both verified DOCX files. State whether the translation is complete or draft. Report elapsed time and cold-cache or warm-cache status. Report unreadable source passages, uncertain figure reconstruction, omitted supplementary files, or unresolved citations. Do not deliver intermediates unless requested.
+Deliver both verified DOCX files. State whether the translation is complete or draft. Report elapsed seconds, the 180/300-second class, and cold-cache or warm-cache status. Report unreadable source passages, uncertain figure reconstruction, omitted supplementary files, or unresolved citations. Do not deliver intermediates unless requested.
+
