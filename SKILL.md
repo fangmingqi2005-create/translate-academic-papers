@@ -24,6 +24,22 @@ Infer the Chinese title from the paper title; use the source file's directory as
 
 Ask a single concise blocking question only when no paper can be accessed, the supplied file is unreadable/corrupt/password-protected, essential pages are missing, or a requested destination cannot be written. If any non-blocking ambiguity remains, make the best evidence-based choice, record it in the final report, and continue. Never pause merely to preview a plan or obtain permission to begin the translation.
 
+## Executable agent contract
+
+This file is an execution contract, not a request to look for a separate “translation engine.” Any AI that loads this skill must perform the work itself in the current session:
+
+1. Resolve the supplied PDF path or attachment and extract the complete source into stable, paragraph-level records.
+2. Translate those records in batches using its own language capability, retaining the records in working memory or a local source-map file. Never stop because no script named `translate.py` or no external translation API is installed.
+3. Use the available document runtime (`python-docx` or an equivalent Office writer) to assemble both DOCX outputs. If a helper script is missing, write the small local builder needed for this paper; do not return only a plan or a text summary.
+4. For every raster figure with semantic English, call the available Image 2/image-edit capability with the original figure as the edit target. If the capability is exposed under a different tool name, use that tool's image-edit mode; do not silently substitute a caption, label table, or unchanged figure. If no image-edit capability exists at all, report that specific hard blocker before delivery rather than claiming success.
+5. Run the supplied citation-link and navigation validators, render the DOCX files with the available Office renderer, inspect the rendered pages, and repair failures before delivery.
+
+The AI must not ask the user to choose a translation model, chunk size, filename, output folder, figure method, or validation sequence. These defaults are already fixed above. It must not answer “the skill only provides instructions” after loading this skill: the loaded instructions authorize and require direct execution of the translation workflow.
+
+### Capability fallback order
+
+Use this order without asking the user: (a) bundled PDF/document/image tools; (b) installed local runtimes and libraries; (c) the model's own translation and structured document-generation ability. A missing optional helper is never a blocker. Only an inaccessible source, an unwritable destination, or a genuinely unavailable mandatory Image 2/image-edit capability may block delivery, and the final report must name the exact blocked artifact.
+
 ## Load supporting instructions
 
 - Load the available `pdf` skill for extraction, OCR, rendering, or PDF inspection.
