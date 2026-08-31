@@ -1,6 +1,6 @@
 # Academic Paper Translator
 
-![version](https://img.shields.io/badge/version-1.1.1-blue)
+![version](https://img.shields.io/badge/version-1.1.2-blue)
 
 A Codex skill for translating complete English academic papers into polished Simplified Chinese DOCX files.
 

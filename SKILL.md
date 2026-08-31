@@ -1,7 +1,7 @@
 ---
 name: translate-academic-papers
 description: "Translate complete English academic papers into polished Simplified Chinese while preserving structure, evidence, equations, tables, citation numbering, and the English reference list. Use for journal articles, conference papers, preprints, and scholarly PDFs; deliver two verified DOCX files by default: a Chinese full-text edition and a paragraph-aligned English-Chinese bilingual edition. Translate all semantic text inside figures and create WPS-compatible citation-to-reference jumps plus clickable DOI links."
-version: 1.1.1
+version: 1.1.2
 ---
 
 # Translate Academic Papers
