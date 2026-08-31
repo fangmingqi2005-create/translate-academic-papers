@@ -40,3 +40,4 @@
 - Check title hierarchy, paragraph pairing, page breaks, figure resolution, caption attachment, table wrapping, equation clipping, fonts, and reference indentation.
 - Ensure no text, image, table, or equation is clipped, overlapped, missing, or stranded.
 - Rerender after every layout-sensitive or OOXML change.
+
