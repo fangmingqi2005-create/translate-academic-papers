@@ -1,5 +1,12 @@
 # Figure translation contract
 
+Before the first raster edit, inspect the real accepted pair
+`examples/heatmap_english_original.png` and
+`examples/heatmap_image2_zh_accepted.png`, plus its audit record in
+`examples/heatmap_image2_acceptance.json`. It demonstrates complete in-image
+replacement, unchanged data values, and an unclipped color bar. This is an
+acceptance pattern, not a paper-specific runtime test.
+
 ## Inventory before editing
 
 For every figure and subfigure, record all visible text: panel letters, title, axes, tick categories, legend entries, color-bar labels, conditions, group names, callouts, node labels, arrows, process steps, footnotes, and significance notes. Create an English-to-Chinese label map and verify terminology against the paper ledger.
@@ -8,8 +15,8 @@ For every figure and subfigure, record all visible text: panel letters, title, a
 
 1. Recreate plots from supplied source data or vector objects when available.
 2. Edit vector PDF/SVG objects when text remains selectable.
-3. For raster-only figures, create a translated raster by deterministically masking/painting over every original English semantic label at its original location, then place Chinese text with an embedded CJK-capable font. Do not add a caption-like translation panel below the figure as a substitute.
-4. When deterministic replacement cannot preserve a raster figure or complex schematic, use the built-in Image 2 edit mode on the original figure crop. Supply an exact label map and invariants for data values, marks, colors, scales, geometry, panel boundaries, and aspect ratio. Forbid added translation panels, captions, cropping, invented content, and data redrawing. Inspect the result visually and retry until every semantic English label is replaced in-image.
+3. For every raster-only figure with semantic English, use the built-in Image 2 edit mode on the original complete figure crop. Supply an exact label map and invariants for data values, marks, colors, scales, geometry, panel boundaries, and aspect ratio. Forbid added translation panels, captions, cropping, invented content, and data redrawing. Inspect the result visually and retry until every semantic English label is replaced in-image.
+4. Deterministic masking, an OCR overlay, or a manually redrawn substitute may be used only as a diagnostic aid; it never satisfies the required Image2 raster deliverable.
 
 Never redraw data points, bars, error bars, distributions, brain maps, microscopy content, or other evidentiary marks from visual estimation. If a safe translation cannot be produced, flag the figure as blocked rather than shipping an untranslated figure.
 
@@ -32,3 +39,4 @@ For Image 2 edits, compare the generated image side by side with the original be
 ## Verification
 
 Compare the translated figure with the original side by side. Check every label in the inventory. Confirm unchanged panel count, plot geometry, scales, colors, legend-to-mark mapping, sample sizes, error bars, significance marks, and notes. Render the figure at final DOCX size and inspect legibility.
+
