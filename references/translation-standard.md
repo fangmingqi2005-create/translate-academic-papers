@@ -28,3 +28,4 @@ Retain the reference list in English. Give every numbered entry an ASCII bookmar
 ## Equations and end matter
 
 Preserve operator precedence, indices, Greek letters, vectors, matrices, and numbering. Translate surrounding definitions, not mathematical expressions. Translate declarations and availability statements while preserving URLs, accession numbers, grant numbers, registry identifiers, author initials, and license names accurately.
+
