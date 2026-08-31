@@ -1,11 +1,47 @@
 ---
 name: translate-academic-papers
 description: "Translate complete English academic papers into polished Simplified Chinese while preserving structure, evidence, equations, tables, citation numbering, and the English reference list. Use for journal articles, conference papers, preprints, and scholarly PDFs; deliver two verified DOCX files by default: a Chinese full-text edition and a paragraph-aligned English-Chinese bilingual edition. Translate all semantic text inside figures and create WPS-compatible citation-to-reference jumps plus clickable DOI links."
+version: 1.1.1
 ---
 
 # Translate Academic Papers
 
 Produce a faithful full-paper translation. Never silently replace the paper with a summary, reading note, or selective translation.
+
+## Standard invocation (标准调用示例)
+
+This is the canonical instruction a user pastes to start the skill. When an AI receives this instruction together with an English paper, it must begin the complete translation immediately and must not ask non-essential questions in between.
+
+> 调用 translate-academic-papers 完整翻译这篇英文论文。直接开始，中间不要询问；生成“全文中文版”和“逐段中英对照版”两个 DOCX。所有图片必须调用 Image2 重新渲染，将图内英文覆盖为中文；保留公式和英文参考文献，并制作可在 WPS 中使用的引文跳转。
+
+### Mandatory execution (执行要求)
+
+Upon loading this skill and receiving an English paper, the AI must:
+
+1. Read and parse the entire paper directly.
+2. Completely translate the body, title, abstract, methods, results, discussion, appendix, and figure captions.
+3. Generate two DOCX files: `全文中文版.docx` and `逐段中英对照版.docx`.
+4. In the bilingual edition, place each complete Chinese paragraph immediately after its complete English paragraph; never merge multiple English paragraphs into one Chinese paragraph, and never split one English paragraph into unrelated Chinese paragraphs.
+5. For every image containing semantic English, call Image 2 to edit the image, using the original as the edit target, overwriting the original English with Chinese at the same locations, and preserving all data, coordinates, scales, colors, shapes, error bars, significance marks, and layout. Do not merely add a translation note below the figure, substitute an untranslated original, or use a standalone legend table or blue annotation box instead of in-figure translation.
+6. Keep in-text citation numbers unchanged.
+7. Keep the reference list in English; do not translate authors, journal names, paper titles, or DOIs.
+8. Build WPS-compatible internal jumps between in-text citations and the reference list using native OOXML `w:hyperlink`, activated with Ctrl+click in WPS; make DOIs clickable links.
+9. Preserve formulas, variables, units, statistical symbols, numbers, and data formats.
+10. After completion, run checks for content, images, citation jumps, paragraph correspondence, and DOCX rendering.
+
+### Only blocking questions allowed (仅在以下情况才允许询问)
+
+Ask the user only when: the file cannot be read; the file is corrupt or password-protected; key pages are missing; the output directory is not writable; or the current environment has no Image 2 / image-editing capability at all.
+
+### Prohibited behaviors (禁止行为)
+
+- Do not output only a translation plan.
+- Do not output only a summary, reading notes, or a partial translation.
+- Do not ask about model, terminology, filename, output directory, or image format before starting.
+- Do not claim a "missing translation engine" and stop working.
+- Do not use figure titles or captions to replace in-figure text translation.
+- Do not build the bilingual edition as "all English + all Chinese".
+- Do not claim delivery before completing the Image 2 image overlays.
 
 ## Default deliverables
 
@@ -160,4 +196,3 @@ For the bilingual edition, extract the pair records and require a one-to-one cou
 ## Required final report
 
 Deliver both verified DOCX files. State whether the translation is complete or draft. Report unreadable source passages, uncertain figure reconstruction, omitted supplementary files, or unresolved citations. Do not deliver intermediates unless requested.
-
