@@ -18,7 +18,7 @@ REFERENCE_HEADING_RE = re.compile(r"^\s*(references|bibliography|参考文献)\s
 REFERENCE_ENTRY_RE = re.compile(r"^\s*(?:\[(\d+)\]|(\d+)[.)])\s+")
 DOI_RE = re.compile(r"(?i)(?:https?://(?:dx\.)?doi\.org/)?(10\.\d{4,9}/[-._;()/:A-Z0-9]+)")
 CITATION_RE = re.compile(
-    r"(?P<open>[（(])(?P<content>\s*\d+(?:\s*[-–—,;，；]\s*\d+)*\s*)(?P<close>[）)])"
+    r"(?P<open>[（(\[])(?P<content>\s*\d+(?:\s*[-–—,;，；]\s*\d+)*\s*)(?P<close>[）)\]])"
 )
 
 
@@ -125,47 +125,90 @@ def _find_reference_entries(document):
                 print(f"WARNING: duplicate reference number {number}", file=sys.stderr)
             else:
                 entries[number] = (paragraph_index, paragraph)
-    return entries
+    if entries:
+        return entries
+
+    # Some PDF/DOCX builders merge or lose the References heading. Fall back
+    # conservatively to a numbered, ascending tail sequence.
+    candidates = []
+    halfway = len(document.paragraphs) // 2
+    for paragraph_index, paragraph in enumerate(document.paragraphs[halfway:], start=halfway):
+        match = REFERENCE_ENTRY_RE.match(paragraph.text.strip())
+        if match:
+            candidates.append((int(match.group(1) or match.group(2)), paragraph_index, paragraph))
+    sequence = []
+    for number, paragraph_index, paragraph in candidates:
+        if not sequence:
+            if number == 1:
+                sequence = [(number, paragraph_index, paragraph)]
+        elif number == sequence[-1][0] + 1:
+            sequence.append((number, paragraph_index, paragraph))
+        elif number == 1:
+            sequence = [(number, paragraph_index, paragraph)]
+    if len(sequence) >= 3:
+        return {number: (paragraph_index, paragraph) for number, paragraph_index, paragraph in sequence}
+    return {}
 
 
 def _link_body_citations(document, reference_numbers, reference_start_index):
     linked = 0
     unresolved = set()
     max_reference = max(reference_numbers) if reference_numbers else 0
+
+    def split_parts(text):
+        nonlocal linked
+        parts = []
+        cursor = 0
+        for match in CITATION_RE.finditer(text):
+            parts.append(text[cursor:match.start()])
+            parts.append(match.group("open"))
+            content = match.group("content")
+            number_matches = list(re.finditer(r"\d+", content))
+            inner_cursor = 0
+            for number_match in number_matches:
+                parts.append(content[inner_cursor:number_match.start()])
+                number = int(number_match.group())
+                if number in reference_numbers:
+                    parts.append(lambda template, n=number: _internal_hyperlink(str(n), f"ref_{n}", template))
+                    linked += 1
+                else:
+                    parts.append(number_match.group())
+                    if number <= max_reference:
+                        unresolved.add(number)
+                inner_cursor = number_match.end()
+            parts.append(content[inner_cursor:])
+            parts.append(match.group("close"))
+            cursor = match.end()
+        parts.append(text[cursor:])
+        return parts
+
     for paragraph_index, paragraph in enumerate(document.paragraphs):
         if paragraph_index >= reference_start_index:
             break
+        paragraph_linked_before = linked
         for run in list(paragraph.runs):
             text = run.text
-            matches = list(CITATION_RE.finditer(text))
-            if not matches:
+            if not CITATION_RE.search(text):
                 continue
-            parts = []
-            cursor = 0
-            for match in matches:
-                parts.append(text[cursor:match.start()])
-                parts.append(match.group("open"))
-                content = match.group("content")
-                number_matches = list(re.finditer(r"\d+", content))
-                inner_cursor = 0
-                for number_match in number_matches:
-                    parts.append(content[inner_cursor:number_match.start()])
-                    number = int(number_match.group())
-                    if number in reference_numbers:
-                        parts.append(lambda template, n=number: _internal_hyperlink(str(n), f"ref_{n}", template))
-                        linked += 1
-                    else:
-                        parts.append(number_match.group())
-                        # Parenthesized years in retained English source text
-                        # (for example, (2010) or (2024)) are not citations.
-                        if number <= max_reference:
-                            unresolved.add(number)
-                    inner_cursor = number_match.end()
-                parts.append(content[inner_cursor:])
-                parts.append(match.group("close"))
-                cursor = match.end()
-            parts.append(text[cursor:])
-            _replace_run_with_parts(run, parts)
+            _replace_run_with_parts(run, split_parts(text))
+
+        # WPS/Word often splits a visible citation such as （1–8）across
+        # several runs. Rebuild text-only paragraphs once when no individual
+        # run contained a complete citation. Never touch paragraphs with a
+        # drawing, because removing their runs would remove the figure.
+        if (
+            linked == paragraph_linked_before
+            and CITATION_RE.search(paragraph.text)
+            and paragraph._p.find(".//" + qn("w:drawing")) is None
+        ):
+            text = paragraph.text
+            runs = list(paragraph.runs)
+            template = runs[0]._r if runs else None
+            for run in runs:
+                paragraph._p.remove(run._r)
+            for part in split_parts(text):
+                element = _new_run(part, template) if isinstance(part, str) else part(template)
+                paragraph._p.append(element)
     return linked, unresolved
 
 
@@ -238,3 +281,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
