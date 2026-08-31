@@ -29,3 +29,4 @@ In the bilingual edition, show both figures at each figure location in this orde
 Tables in the bilingual edition may use English cell text followed by Chinese in the same cell when space permits; otherwise place the English table first and the Chinese table directly after it. Preserve all values and notes.
 
 Both editions must use the same reference numbering and English reference list.
+
