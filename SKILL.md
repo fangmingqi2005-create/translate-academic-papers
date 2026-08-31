@@ -1,6 +1,6 @@
 ---
 name: translate-academic-papers
-description: Translate complete English academic papers into polished Simplified Chinese while preserving structure, evidence, equations, tables, citation numbering, and the English reference list. Use for journal articles, conference papers, preprints, and scholarly PDFs; deliver two verified DOCX files by default: a Chinese full-text edition and a paragraph-aligned English-Chinese bilingual edition. Translate all semantic text inside figures and create WPS-compatible citation-to-reference jumps plus clickable DOI links.
+description: "Translate complete English academic papers into polished Simplified Chinese while preserving structure, evidence, equations, tables, citation numbering, and the English reference list. Use for journal articles, conference papers, preprints, and scholarly PDFs; deliver two verified DOCX files by default: a Chinese full-text edition and a paragraph-aligned English-Chinese bilingual edition. Translate all semantic text inside figures and create WPS-compatible citation-to-reference jumps plus clickable DOI links."
 ---
 
 # Translate Academic Papers
@@ -11,8 +11,8 @@ Produce a faithful full-paper translation. Never silently replace the paper with
 
 Generate two DOCX files unless the user explicitly requests only one:
 
-1. `<Chinese title>_全文中文版.docx`: Chinese body, translated figures and tables, original English reference list.
-2. `<Chinese title>_逐段中英对照版.docx`: each complete English source paragraph immediately followed by its Chinese translation; preserve the same headings, figures, equations, tables, citations, and reference list.
+1. `<Chinese title>_Image2全文中文版.docx`: Chinese body, Image 2-translated figures and tables, original English reference list.
+2. `<Chinese title>_Image2逐段中英对照版.docx`: each complete English source paragraph immediately followed by its Chinese translation; preserve the same headings, figures, equations, tables, citations, and reference list.
 
 Use the exact paragraph pairing and styling contract in [references/output-variants.md](references/output-variants.md). Do not interpret “bilingual” as two columns unless the user explicitly requests columns.
 
@@ -29,16 +29,37 @@ Ask a single concise blocking question only when no paper can be accessed, the s
 This file is an execution contract, not a request to look for a separate “translation engine.” Any AI that loads this skill must perform the work itself in the current session:
 
 1. Resolve the supplied PDF path or attachment and extract the complete source into stable, paragraph-level records.
-2. Translate those records in batches using its own language capability, retaining the records in working memory or a local source-map file. Never stop because no script named `translate.py` or no external translation API is installed.
+2. Translate those records in batches using its own language capability, retaining the records in working memory or a local source-map file. The model itself is the translation engine: never stop, defer, or report “no batch translation executor” merely because no script named `translate.py`, external translation API, or third-party translation plugin is installed. If the source exceeds one response or context window, continue in deterministic source-ID batches and write each completed batch into the same local build state until the complete paper is assembled.
 3. Use the available document runtime (`python-docx` or an equivalent Office writer) to assemble both DOCX outputs. If a helper script is missing, write the small local builder needed for this paper; do not return only a plan or a text summary.
 4. For every raster figure with semantic English, call the available Image 2/image-edit capability with the original figure as the edit target. If the capability is exposed under a different tool name, use that tool's image-edit mode; do not silently substitute a caption, label table, or unchanged figure. If no image-edit capability exists at all, report that specific hard blocker before delivery rather than claiming success.
 5. Run the supplied citation-link and navigation validators, render the DOCX files with the available Office renderer, inspect the rendered pages, and repair failures before delivery.
 
-The AI must not ask the user to choose a translation model, chunk size, filename, output folder, figure method, or validation sequence. These defaults are already fixed above. It must not answer “the skill only provides instructions” after loading this skill: the loaded instructions authorize and require direct execution of the translation workflow.
+The AI must not ask the user to choose a translation model, chunk size, filename, output folder, figure method, or validation sequence. These defaults are already fixed above. It must not answer “the skill only provides instructions,” “a batch translation executor is missing,” or “the paper is too long for this turn” after loading this skill. The loaded instructions authorize and require direct execution: maintain resumable local state and continue source-ID batches until both complete DOCX deliverables are written, linked, rendered, and checked.
 
 ### Capability fallback order
 
 Use this order without asking the user: (a) bundled PDF/document/image tools; (b) installed local runtimes and libraries; (c) the model's own translation and structured document-generation ability. A missing optional helper is never a blocker. Only an inaccessible source, an unwritable destination, or a genuinely unavailable mandatory Image 2/image-edit capability may block delivery, and the final report must name the exact blocked artifact.
+
+On Windows, absence of `soffice` is not a blocker when Microsoft Word or WPS is installed. Use `scripts/render_docx_windows.ps1`, which tries `Word.Application` first and `KWPS.Application` second, exports the DOCX to PDF, and rasterizes every page with Poppler. Do not incorrectly report that rendering is unavailable merely because a LibreOffice-only helper cannot find `soffice`.
+
+### Resumable Windows pipeline
+
+On Windows, prefer `scripts/run_pipeline.py` to create the page-aware source records, persist translations after every source ID, and assemble both DOCX variants. Run it with the bundled Python runtime. If `C:\at` contains the Argos runtime and English-Chinese model, the script may use that local model only as a deterministic first-pass draft. Machine-first output is never deliverable: the agent must replace or revise every cached Chinese record with its own academically accurate translation and mark it `ai_verified` before final assembly. The cache lives beside the paper in `<pdf-stem>_translation_work/translations.jsonl`, so interruption never requires restarting completed paragraphs.
+
+```powershell
+python scripts/run_pipeline.py paper.pdf --output-dir <paper-directory>
+```
+
+This default command deliberately writes machine-first files inside the work
+directory with `机器初译草稿` in their names. It cannot create deceptively named
+final deliverables. After the agent has revised every effective cache row and
+marked it `ai_verified`, it may assemble human-verified **staging text** with:
+
+```powershell
+python scripts/run_pipeline.py paper.pdf --output-dir <paper-directory> --final --title-zh "<verified Chinese title>"
+```
+
+The command deliberately writes `AI校订文本_待Image2与链接` staging names rather than final names. Replace applicable figures through Image 2, then run `make_image2_manifest.py` to create a hash-aligned, deliberately pending audit manifest. Visually inspect every extracted embedded image and change a row to `accepted` only after its label audit passes; the helper never self-certifies Image2 output. Run `link_citations.py` and `validate_navigation.py`, then assign the two final `_Image2...` filenames and run `validate_delivery.py` on both documents, the completed manifest, and `--translation-cache translations.jsonl`. Follow [references/delivery-contract.md](references/delivery-contract.md). A successful draft or text assembly is not a successful skill invocation.
 
 ## Load supporting instructions
 
@@ -46,14 +67,16 @@ Use this order without asking the user: (a) bundled PDF/document/image tools; (b
 - Load the available `documents` skill for DOCX creation and visual verification.
 - Read [references/translation-standard.md](references/translation-standard.md) before translating.
 - Read [references/figure-translation.md](references/figure-translation.md) before processing figures.
+- Inspect the accepted Image2 before/after example referenced there before the first raster edit.
 - Read [references/output-variants.md](references/output-variants.md) before building either DOCX.
 - Read [references/qa-checklist.md](references/qa-checklist.md) before delivery.
+- Read [references/delivery-contract.md](references/delivery-contract.md) before final assembly.
 
 ## Quality and efficiency policy
 
 Prioritize a verified, complete translation. Work efficiently using one source parse, one shared source map, stable-ID translation batches, reusable hash-validated caches, one process for both DOCX variants, and targeted retries for failed units. These are efficiency practices, not delivery deadlines.
 
-Never omit content, weaken paragraph alignment, skip figure-interior translation, bypass navigation, or avoid render QA in order to finish sooner. Continue until every hard quality gate passes or a genuine external blocker remains. If an external service stalls, preserve valid work and report the specific blocker rather than shipping a falsely complete file.
+Never omit content, weaken paragraph alignment, skip figure-interior translation, bypass navigation, or avoid render QA in order to finish sooner. Continue until every hard quality gate passes or a genuine external blocker remains. A long paper, context-window boundary, absent translation script/API, or need for multiple continuation turns is not an external blocker. If an external service stalls, preserve valid work and report the specific blocker rather than shipping a falsely complete file.
 
 ## Workflow
 
@@ -87,6 +110,8 @@ Do not deliver an English figure with only a Chinese caption. Rebuild or edit th
 
 For every raster figure that contains semantic English requiring replacement, **must call Image 2** to edit the supplied figure image. Inspect the original crop, pass that crop as the Image 2 edit target, provide an exact English-to-Chinese label map, and explicitly require preservation of every data value, data mark, color, scale, panel boundary, uncertainty mark, significance mark, geometry, and aspect ratio. Explicitly forbid translation panels, added captions, invented labels, cropping, and data redrawing. View the Image 2 result and accept it only after confirming that the original English labels are removed and Chinese replacements appear at the same locations. If the image fails, revise the Image 2 prompt and regenerate before continuing. Do not substitute a caption, label table, ordinary redraw, OCR overlay, or untranslated original image for this required Image 2 edit.
 
+When updating an already assembled DOCX, use `scripts/replace_docx_media.py` with the exact `word/media/...` member. Write to a new DOCX, then regenerate the Image2 manifest and rerender; never assume that replacing a filesystem image automatically updates the embedded DOCX copy.
+
 Recreate editable tables in Chinese. Preserve equations as editable equations whenever possible.
 
 ### 5. Build both document variants
@@ -117,6 +142,16 @@ Use lawful DOI resolution and full-text routes only. Prefer publisher pages, Pub
 ### 7. Verify content, navigation, and rendering
 
 Render both final DOCX files and inspect every page. Verify one-to-one paragraph pairing in the bilingual file, translated figure interiors in both files, references and citations in both files, and WPS-compatible hyperlink field instructions. Fix defects and rerender after any layout-sensitive or OOXML change.
+
+On Windows run the installed Office backend directly:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/render_docx_windows.ps1 -InputDocx final.docx -OutputDir final_render
+```
+
+The command must report `status: pass`, identify the Word or WPS backend, and produce one PNG per PDF page. Inspect the complete PNG sequence; successful PDF creation alone is not visual QA.
+
+For long documents, first build contact sheets with `scripts/make_contact_sheet.py` to scan every page for blank pages, overflow, broken figures, clipped tables, and abrupt paragraph loss. Then inspect full-resolution page PNGs around every figure/table and any suspicious contact-sheet page. Contact sheets accelerate inspection but never replace targeted full-resolution checks.
 
 For every figure, extract the image from the final DOCX (`word/media/*`), compare it with the source, and record a label-by-label pass/fail result. Do not infer success from the surrounding caption or from a translation panel outside the plot area. If direct masking and redraw cannot preserve the data marks, stop and report the figure as blocked instead of shipping an English figure.
 
